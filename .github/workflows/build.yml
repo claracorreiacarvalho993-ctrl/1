@@ -1,0 +1,47 @@
+name: Build browser XT parser
+on:
+  push:
+    paths:
+      - 'xt/**'
+      - '.github/workflows/build.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: omerbasavul/cadconvert
+          ref: 6046d1369949a09fa236f6bcf5f804eedb328685
+          path: vendor/cadconvert
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Use sequential geometry processing in browser
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          for name in ('lib.rs', 'edge.rs'):
+              p = Path('vendor/cadconvert/native/crates/cad-tess/src') / name
+              s = p.read_text().replace('.into_par_iter()', '.into_iter()').replace('.par_iter()', '.iter()')
+              p.write_text(s)
+          PY
+      - name: Compile
+        run: cargo build --manifest-path xt/Cargo.toml --release --target wasm32-unknown-unknown
+      - name: Check browser binary on public sample
+        run: node xt/check-wasm.cjs xt/target/wasm32-unknown-unknown/release/lqz_xt_viewer.wasm vendor/cadconvert/native/crates/cad-convert/tests/samples/small.x_t
+      - name: Publish compiled browser asset
+        run: |
+          mkdir -p assets
+          cp xt/target/wasm32-unknown-unknown/release/lqz_xt_viewer.wasm assets/xt-viewer.wasm
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/xt-viewer.wasm
+          if ! git diff --cached --quiet; then
+            git commit -m 'Publish X_T browser parser'
+            git push
+          fi
+
