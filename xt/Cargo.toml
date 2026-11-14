@@ -1,0 +1,21 @@
+[package]
+name = "lqz-xt-viewer"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+cad-xt = { path = "../vendor/cadconvert/native/crates/cad-xt" }
+xt-parser = { path = "../vendor/cadconvert/native/crates/xt-parser" }
+cad-tess = { path = "../vendor/cadconvert/native/crates/cad-tess" }
+cad-export = { path = "../vendor/cadconvert/native/crates/cad-export" }
+serde_json = "1"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+
